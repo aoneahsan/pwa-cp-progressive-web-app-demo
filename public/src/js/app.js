@@ -13,8 +13,7 @@ let pwaInstallPromptEvent
 
 // beforeinstallprompt event
 window.addEventListener('beforeinstallprompt', event => {
-  // console.log('[App.js] beforeinstallprompt event...', event)
   pwaInstallPromptEvent = event
-  // event.preventDefault()
+  event.preventDefault()
   return false
 })
