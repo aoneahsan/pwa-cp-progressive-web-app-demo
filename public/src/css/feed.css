@@ -27,6 +27,14 @@
   padding: 30px;
 }
 
+.floating-button2 {
+  z-index: 1000;
+  position: fixed;
+  bottom: -20;
+  left: -26px;
+  padding: 30px;
+}
+
 .input-section {
   display: block;
   margin: 10px auto;
