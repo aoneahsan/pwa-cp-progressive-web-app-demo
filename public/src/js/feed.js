@@ -1,0 +1,103 @@
+// On demand cache approache
+const cachesAvailableInWindow = 'caches' in window
+const USER_REQUEST_CAHCE_KEY = 'user-requested-cache'
+const urlToPost = 'https://httpbin.org/get'
+const urlToPostImage = '/src/images/sf-boat.jpg'
+
+const shareImageButton = document.querySelector('#share-image-button')
+const createPostArea = document.querySelector('#create-post')
+const closeCreatePostModalButton = document.querySelector(
+  '#close-create-post-modal-btn'
+)
+const sharedMomentsArea = document.querySelector('#shared-moments')
+
+function openCreatePostModal () {
+  createPostArea.style.display = 'block'
+
+  console.log('[Feed.js] pwaInstallPromptEvent = ', pwaInstallPromptEvent)
+
+  // SW Related Code
+  // check if browser tried to prompt install pwa, if yes, then show install prompt now
+  // we stored install prompt event in a variable and that variable is available in this file
+  if (pwaInstallPromptEvent) {
+    // alert('pwaInstallPromptEvent')
+
+    // fire prompt event
+    pwaInstallPromptEvent.prompt()
+
+    // listen for user action and proceed accordingly
+    pwaInstallPromptEvent.userChoice.then(res => {
+      console.log('[Feed.js] res = ', res)
+      if (res.outcome === 'dismissed') {
+        console.log('[Feed.js] pwa install prompt was dismissed by user.')
+      } else {
+        console.log('[Feed.js] user installed pwa successfully.')
+      }
+    })
+
+    // set event to null so we don't ask user to install app again and again
+    // when he clicks on create new post button, (Hint: instead os clearing
+    // event you can store a counter in localstorage and show prompt again
+    // after user add posts few more times :)
+    pwaInstallPromptEvent = null
+  }
+}
+
+function closeCreatePostModal () {
+  createPostArea.style.display = 'none'
+}
+
+shareImageButton.addEventListener('click', openCreatePostModal)
+
+closeCreatePostModalButton.addEventListener('click', closeCreatePostModal)
+
+const saveCardHandler = event => {
+  if (cachesAvailableInWindow) {
+    caches.open(USER_REQUEST_CAHCE_KEY).then(cache => {
+      cache.add(urlToPost)
+      cache.add(urlToPostImage)
+    })
+  }
+}
+
+function createCard () {
+  const cardWrapper = document.createElement('div')
+  cardWrapper.className = 'shared-moment-card mdl-card mdl-shadow--2dp'
+
+  const cardTitle = document.createElement('div')
+  cardTitle.className = 'mdl-card__title'
+  cardTitle.style.backgroundImage = `url(${urlToPostImage})`
+  cardTitle.style.backgroundSize = 'cover'
+  cardTitle.style.height = '180px'
+  cardWrapper.appendChild(cardTitle)
+
+  const cardTitleTextElement = document.createElement('h2')
+  cardTitleTextElement.className = 'mdl-card__title-text'
+  cardTitleTextElement.textContent = 'San Francisco Trip'
+  cardTitleTextElement.style.color = 'white'
+  cardTitle.appendChild(cardTitleTextElement)
+
+  const cardSupportingText = document.createElement('div')
+  cardSupportingText.className = 'mdl-card__supporting-text'
+  cardSupportingText.textContent = 'In San Francisco'
+  cardSupportingText.style.textAlign = 'center'
+
+  if (cachesAvailableInWindow) {
+    const cardSaveButton = document.createElement('button')
+    cardSaveButton.textContent = 'Save'
+    cardSaveButton.addEventListener('click', saveCardHandler)
+    cardSupportingText.appendChild(cardSaveButton)
+  }
+
+  cardWrapper.appendChild(cardSupportingText)
+  componentHandler.upgradeElement(cardWrapper)
+  sharedMomentsArea.appendChild(cardWrapper)
+}
+
+fetch(urlToPost)
+  .then(function (res) {
+    return res.json()
+  })
+  .then(function (data) {
+    createCard()
+  })
