@@ -48,7 +48,7 @@ self.addEventListener("activate", (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== STATIC_CACHE_KEY && key !== DYNAMIC_CACHE_KEY) {
-            console.log("[Service Worker] Remobing old cache...", key);
+            // console.log("[Service Worker] Remobing old cache...", key);
             return caches.delete(key);
           }
         })
@@ -127,12 +127,6 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   // console.log('[Service Worker] fetching event...', event)
   const postUrl = "https://httpbin.org/get";
-
-  console.log(
-    event.request.url,
-    postUrl,
-    event.request.url.indexOf(postUrl) > -1
-  );
 
   if (event.request.url.indexOf(postUrl) > -1) {
     event.respondWith(
