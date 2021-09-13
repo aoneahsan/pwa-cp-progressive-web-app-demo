@@ -1,7 +1,8 @@
 // On demand cache approache
 const cachesAvailableInWindow = 'caches' in window
-const urlToPost = 'https://httpbin.org/get'
-const urlToPostImage = '/src/images/sf-boat.jpg'
+const indexedDBAvailableInWindow = 'indexedDB' in window
+const serviceWorkerAvailableInNavigator = 'serviceWorker' in navigator
+const urlToPost = 'https://pwa-cp-default-rtdb.firebaseio.com/posts.json'
 
 const shareImageButton = document.querySelector('#share-image-button')
 const createPostArea = document.querySelector('#create-post')
@@ -45,26 +46,26 @@ shareImageButton.addEventListener('click', openCreatePostModal)
 
 closeCreatePostModalButton.addEventListener('click', closeCreatePostModal)
 
-function createCard () {
+function createCard (data) {
   const cardWrapper = document.createElement('div')
   cardWrapper.className = 'shared-moment-card mdl-card mdl-shadow--2dp'
 
   const cardTitle = document.createElement('div')
   cardTitle.className = 'mdl-card__title'
-  cardTitle.style.backgroundImage = `url(${urlToPostImage})`
+  cardTitle.style.backgroundImage = `url(${data.image})`
   cardTitle.style.backgroundSize = 'cover'
   cardTitle.style.height = '180px'
   cardWrapper.appendChild(cardTitle)
 
   const cardTitleTextElement = document.createElement('h2')
   cardTitleTextElement.className = 'mdl-card__title-text'
-  cardTitleTextElement.textContent = 'San Francisco Trip'
+  cardTitleTextElement.textContent = data.title
   cardTitleTextElement.style.color = 'white'
   cardTitle.appendChild(cardTitleTextElement)
 
   const cardSupportingText = document.createElement('div')
   cardSupportingText.className = 'mdl-card__supporting-text'
-  cardSupportingText.textContent = 'In San Francisco'
+  cardSupportingText.textContent = data.location
   cardSupportingText.style.textAlign = 'center'
 
   cardWrapper.appendChild(cardSupportingText)
@@ -80,6 +81,23 @@ const clearCards = () => {
   }
 }
 
+const updateCardsUi = data => {
+  clearCards()
+  for (let i = 0; i < data.length; i++) {
+    createCard(data[i])
+  }
+}
+
+const setUpCardsUi = data => {
+  const dataArray = []
+  for (const key in data) {
+    if (Object.hasOwnProperty.call(data, key)) {
+      dataArray.push(data[key])
+    }
+  }
+  updateCardsUi(dataArray)
+}
+
 // From Web & Cache, use cache if get first and then update with latest one or simply use network one if get first/available
 // make request to network and cache at same time
 
@@ -91,32 +109,24 @@ fetch(urlToPost)
   })
   .then(function (data) {
     networkResponseRecieved = true
-    clearCards()
-    createCard()
+    setUpCardsUi(data)
   })
 
 // 1
-if (cachesAvailableInWindow) {
-  caches
-    .match(urlToPost)
-    .then(res => {
-      if (res) {
-        return res.json() // because we store complete response in SW, so here we will first get json data, we will convert it first although we never use it but just so we follow each step
-      }
-    })
-    .then(data => {
-      if (!networkResponseRecieved) {
-        clearCards()
-        createCard()
-      }
-    })
+if (indexedDBAvailableInWindow) {
+  readDataFromIndexDB(POSTS_DB_TABLE_NAME).then(data => {
+    console.log('[Feed.js] data from indexedDB: data:', data)
+    if (!networkResponseRecieved) {
+      updateCardsUi(data)
+    }
+  })
 }
 
 // unregister registered service workers
 const unregisterServiceWorkers = () => {
   const unregisterButton = document.getElementById('unregister-service-worker')
   unregisterButton.addEventListener('click', () => {
-    if ('serviceWorker' in navigator) {
+    if (serviceWorkerAvailableInNavigator) {
       navigator.serviceWorker.getRegistrations().then(registrations => {
         for (let i = 0; i < registrations.length; i++) {
           registrations[i].unregister()
