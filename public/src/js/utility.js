@@ -1,44 +1,73 @@
-const POSTS_DB_STORE_NAME = 'posts-store'
-const POSTS_DB_TABLE_NAME = 'posts'
-const POSTS_DB_KEY_PATH = 'id'
+// Global Consts
+const urlToPostsApiGet =
+  "https://pwa-cp-default-rtdb.firebaseio.com/posts.json";
+const urlToPostsApiPost =
+  "https://us-central1-pwa-cp.cloudfunctions.net/storePostData";
 
-const idbPromise = idb.open(POSTS_DB_STORE_NAME, 1, db => {
-  if (!db.objectStoreNames.contains(POSTS_DB_TABLE_NAME)) {
-    db.createObjectStore(POSTS_DB_TABLE_NAME, { keyPath: POSTS_DB_KEY_PATH })
+// indexedDb Keys
+const POSTS_DB_STORE_NAME = "posts-store";
+const POSTS_DB_TABLE_NAME = "posts";
+const POSTS_SYNC_DB_TABLE_NAME = "sync-posts";
+const TABLES_ARRAY = [POSTS_DB_TABLE_NAME, POSTS_SYNC_DB_TABLE_NAME];
+const TABLE_KEY_PATH = "id";
+
+// sync manager keys
+const SYNC_MANAGER_KEY_FOR_POST_SYNC = "sync-new-post";
+
+const idbPromise = idb.open(POSTS_DB_STORE_NAME, 1, (db) => {
+  for (let i = 0; i < TABLES_ARRAY.length; i++) {
+    const table = TABLES_ARRAY[i];
+    if (!db.objectStoreNames.contains(table)) {
+      db.createObjectStore(table, { keyPath: TABLE_KEY_PATH });
+    }
   }
-})
+});
 
-const writeDataInIndexDB = (storeName, data) => {
-  return idbPromise.then(db => {
-    const tx = db.transaction(storeName, 'readwrite')
-    const store = tx.objectStore(storeName)
-    store.put(data)
-    return tx.complete
-  })
-}
+const writeDataInIndexDB = async (storeName, data) => {
+  return idbPromise.then((db) => {
+    const tx = db.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+    store.put(data);
+    return tx.complete;
+  });
+};
 
-const readDataFromIndexDB = storeName => {
-  return idbPromise.then(db => {
-    const tx = db.transaction(storeName, 'readonly')
-    const store = tx.objectStore(storeName)
-    return store.getAll()
-  })
-}
+const readDataFromIndexDB = async (storeName) => {
+  return idbPromise.then((db) => {
+    const tx = db.transaction(storeName, "readonly");
+    const store = tx.objectStore(storeName);
+    return store.getAll();
+  });
+};
 
-const clearStoreDataIndexDB = storeName => {
-  return idbPromise.then(db => {
-    const tx = db.transaction(storeName, 'readwrite')
-    const store = tx.objectStore(storeName)
-    store.clear()
-    return tx.complete // when ever we change data from store we need to return tx.complete to ensure that operation completes successfully
-  })
-}
+const clearStoreDataIndexDB = async (storeName) => {
+  return idbPromise.then((db) => {
+    const tx = db.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+    store.clear();
+    return tx.complete; // when ever we change data from store we need to return tx.complete to ensure that operation completes successfully
+  });
+};
 
-const deleteItemFromIndexDB = (storeName, id) => {
-  return idbPromise.then(db => {
-    const tx = db.transaction(storeName, 'readwrite')
-    const store = tx.objectStore(storeName)
-    store.delete(id)
-    return tx.complete
-  })
-}
+const deleteItemFromIndexDB = async (storeName, id) => {
+  return idbPromise.then((db) => {
+    const tx = db.transaction(storeName, "readwrite");
+    const store = tx.objectStore(storeName);
+    store.delete(id);
+    return tx.complete;
+  });
+};
+
+// APIs functions
+const sendDataToUrl = async (url, data) => {
+  return fetch(url, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  }).then((res) => {
+    return res.json();
+  });
+};

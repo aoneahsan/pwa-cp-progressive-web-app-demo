@@ -12,8 +12,8 @@ if ('serviceWorker' in navigator) {
 let pwaInstallPromptEvent
 
 // beforeinstallprompt event
-window.addEventListener('beforeinstallprompt', event => {
-  pwaInstallPromptEvent = event
-  event.preventDefault()
-  return false
-})
+// window.addEventListener('beforeinstallprompt', event => { // commented to avoid getting this again and again in development
+//   pwaInstallPromptEvent = event
+//   event.preventDefault()
+//   return false
+// })
