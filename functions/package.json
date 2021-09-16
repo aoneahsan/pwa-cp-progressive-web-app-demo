@@ -6,7 +6,8 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "wpgk": "web-push generate-vapid-keys"
   },
   "engines": {
     "node": "14"
@@ -15,7 +16,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "firebase-admin": "^9.11.1",
-    "firebase-functions": "^3.14.1"
+    "firebase-functions": "^3.14.1",
+    "web-push": "^3.4.5"
   },
   "devDependencies": {
     "firebase-functions-test": "^0.2.0"
