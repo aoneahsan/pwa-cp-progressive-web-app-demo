@@ -3,9 +3,11 @@ importScripts('/src/js/idb.js')
 
 // Import scripts - custom
 importScripts('/src/js/utility.js')
+importScripts('/src/test.js')
 
 // cache keys vars
-const CACHE_VERSION = 'v2'
+// const CACHE_VERSION = 'v10'
+// const CACHE_VERSION = new Date().toISOString()
 const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`
 const DYNAMIC_CACHE_KEY = `dynamic-${CACHE_VERSION}`
 const OFFLINE_HTML_FILE = '/offline.html'
@@ -153,6 +155,7 @@ self.addEventListener('sync', event => {
 })
 
 // listen for notification actions
+// notification actions click listener
 self.addEventListener('notificationclick', event => {
   const notification = event.notification
   const action = event.action
@@ -160,19 +163,71 @@ self.addEventListener('notificationclick', event => {
     notification,
     action
   })
-  if (action === 'confirm') {
-    notification.close()
-  } else if (action === 'cancel') {
+  if (action === 'cancel') {
     notification.close()
   } else {
+    // other case is confirm (or if not buttons shown to user then simple click on notification)
+
+    // open notification url
+    event.waitUntil(
+      clients.matchAll().then(allClients => {
+        const activeClient = allClients.find(el => {
+          return el.visibilityState === 'visible'
+        })
+        if (activeClient) {
+          activeClient.navigate(notification.data.url)
+          activeClient.focus()
+        } else {
+          activeClient.openWindow(notification.data.url)
+        }
+      })
+    )
     notification.close()
   }
 })
-
+// notification "x" close action (or user close notification) listener
 self.addEventListener('notificationclose', event => {
   const notification = event.notification
 
   console.log('[Service Worker] notificationclose event', {
     notification
   })
+})
+
+// listener for web push notifications
+self.addEventListener('push', event => {
+  console.log('[Service Worker] new web push notification event: ', event)
+
+  let data = { title: 'NEW!', content: 'new new new :)(:' }
+
+  if (event.data) {
+    // payload send by push notification
+    data = JSON.parse(event.data.text())
+  }
+
+  const options = {
+    body: data.content,
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png',
+    dir: 'ltr',
+    lang: 'en-US',
+    vibrate: [100, 50, 200],
+    tag: 'pwa-web-push-notification', // tag to group notifications, new notification of this tag will go beneth top one
+    renotify: true, // normally used together work "tag", as new notification will atleast vibrate phone again.
+    actions: [
+      {
+        action: 'confirm', // id-of-notification
+        title: 'Okay',
+        icon: '/src/images/icons/app-icon-96x96.png'
+      },
+      {
+        action: 'cancel',
+        title: 'Cancel',
+        icon: '/src/images/icons/app-icon-96x96.png'
+      }
+    ]
+  }
+
+  // show notification
+  self.registration.showNotification(data.title, options)
 })

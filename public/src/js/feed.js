@@ -1,3 +1,5 @@
+// Global constants
+
 // On demand cache approache
 const shareImageButton = document.querySelector('#share-image-button')
 const createPostArea = document.querySelector('#create-post')
@@ -61,13 +63,13 @@ createPostForm.addEventListener('submit', event => {
 
   closeCreatePostModal()
 
-  createPostTitle.value = ''
-  createPostLocation.value = ''
+  const title = createPostTitle.value
+  const location = createPostLocation.value
 
   const postData = {
     id: new Date().toISOString(),
-    title: createPostTitle.value,
-    location: createPostLocation.value,
+    title,
+    location,
     image:
       'https://firebasestorage.googleapis.com/v0/b/pwa-cp.appspot.com/o/sf-boat.jpg?alt=media&token=eb466a4e-c360-46b0-bd49-41993eb627a0'
   }
@@ -86,12 +88,18 @@ createPostForm.addEventListener('submit', event => {
       .then(() => {
         const data = { message: 'Post added in sync will be created shortly.' }
         snackBarContainer.MaterialSnackbar.showSnackbar(data)
+
+        createPostTitle.value = ''
+        createPostLocation.value = ''
       })
       .catch(err => {
         console.error(
           'Error while adding post to sync to create on server, err: ',
           err
         )
+
+        createPostTitle.value = ''
+        createPostLocation.value = ''
       })
   } else {
     // sync manager not available just try to send post

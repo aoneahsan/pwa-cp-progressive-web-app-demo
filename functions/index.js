@@ -45,7 +45,8 @@ exports.storePostData = functions.https.onRequest((request, response) => {
           const pushConfig = sub.val()
           const pushData = JSON.stringify({
             title: 'Post Created!',
-            content: 'New post created successfully.'
+            content: 'New post created successfully.',
+            url: 'http://localhost:8080/help'
           })
           webPush.sendNotification(pushConfig, pushData).catch(err => {
             console.error(

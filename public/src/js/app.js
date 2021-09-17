@@ -1,3 +1,11 @@
+// Global constants
+const cachesAvailableInWindow = 'caches' in window
+const indexedDBAvailableInWindow = 'indexedDB' in window
+const syncManagerAvailableInWindow = 'SyncManager' in window
+const notificationsAvailableInWindow = 'Notification' in window
+const vapidPublicKey =
+  'BPgkv9lvuQWaZKfcUMirrqmhy713qC3rFoo5tz2enFdRfbrdRPFXo4pSB0twS-yjMvRu_G4fqwvq0vcJQwtdGq0'
+
 if (!window.Promise) {
   window.Promise = Promise
 }
@@ -27,7 +35,7 @@ if (notificationsAvailableInWindow) {
       body: 'You successfully subscribed to our notifications service.',
       icon: '/src/images/icons/app-icon-96x96.png',
       badge: '/src/images/icons/app-icon-96x96.png',
-      image: '/src/images/sf-boat.jpg',
+      // image: '/src/images/sf-boat.jpg',
       dir: 'ltr',
       lang: 'en-US',
       vibrate: [100, 50, 200],
@@ -68,8 +76,6 @@ if (notificationsAvailableInWindow) {
         .then(subscription => {
           if (subscription === null) {
             // create new subscription
-            const vapidPublicKey =
-              'BPgkv9lvuQWaZKfcUMirrqmhy713qC3rFoo5tz2enFdRfbrdRPFXo4pSB0twS-yjMvRu_G4fqwvq0vcJQwtdGq0'
             const convertedVapidPublicKey = urlBase64ToUint8Array(
               vapidPublicKey
             )

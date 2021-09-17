@@ -2,7 +2,9 @@
 const urlToPostsApiGet = 'https://pwa-cp-default-rtdb.firebaseio.com/posts.json'
 const urlToPostsApiPost =
   'https://us-central1-pwa-cp.cloudfunctions.net/storePostData'
-const urlToSubscriptionsApiPost = 'https://pwa-cp-default-rtdb.firebaseio.com/subscriptions.json'
+const urlToSubscriptionsApiPost =
+  'https://pwa-cp-default-rtdb.firebaseio.com/subscriptions.json'
+const serviceWorkerAvailableInNavigator = 'serviceWorker' in navigator
 
 // indexedDb Keys
 const POSTS_DB_STORE_NAME = 'posts-store'
@@ -17,6 +19,7 @@ const SYNC_MANAGER_KEY_FOR_POST_SYNC = 'sync-new-post'
 const idbPromise = idb.open(POSTS_DB_STORE_NAME, 1, db => {
   for (let i = 0; i < TABLES_ARRAY.length; i++) {
     const table = TABLES_ARRAY[i]
+    console.log('[Utility.js] creating indexedDb table: ' + table)
     if (!db.objectStoreNames.contains(table)) {
       db.createObjectStore(table, { keyPath: TABLE_KEY_PATH })
     }
