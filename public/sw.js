@@ -198,7 +198,11 @@ self.addEventListener('notificationclose', event => {
 self.addEventListener('push', event => {
   console.log('[Service Worker] new web push notification event: ', event)
 
-  let data = { title: 'NEW!', content: 'new new new :)(:' }
+  let data = {
+    title: 'NEW!',
+    content: 'new new new :)(:',
+    url: 'http://localhost:8080/should-get-url-from-server'
+  }
 
   if (event.data) {
     // payload send by push notification
@@ -225,7 +229,10 @@ self.addEventListener('push', event => {
         title: 'Cancel',
         icon: '/src/images/icons/app-icon-96x96.png'
       }
-    ]
+    ],
+    data: {
+      url: data.url
+    }
   }
 
   // show notification
