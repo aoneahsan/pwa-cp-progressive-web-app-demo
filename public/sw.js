@@ -6,7 +6,7 @@ importScripts('/src/js/utility.js')
 importScripts('/src/test.js')
 
 // cache keys vars
-// const CACHE_VERSION = 'v10'
+// const CACHE_VERSION = 'v1'
 // const CACHE_VERSION = new Date().toISOString()
 const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`
 const DYNAMIC_CACHE_KEY = `dynamic-${CACHE_VERSION}`
