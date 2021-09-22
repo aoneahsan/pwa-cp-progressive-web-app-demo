@@ -7,12 +7,17 @@ const urlToSubscriptionsApiPost =
 const serviceWorkerAvailableInNavigator = 'serviceWorker' in navigator
 
 // indexedDb Keys
+const INDEXED_DB_VERSION = 3
 const POSTS_DB_STORE_NAME = 'posts-store'
 const POSTS_DB_TABLE_NAME = 'posts'
 const POSTS_SYNC_DB_TABLE_NAME = 'sync-posts'
 // table key to store and check cache time limit
 const CACHE_TIME_LIMIT_TABLE_KEY = 'cache-time-limit'
-const TABLES_ARRAY = [POSTS_DB_TABLE_NAME, POSTS_SYNC_DB_TABLE_NAME, CACHE_TIME_LIMIT_TABLE_KEY]
+const TABLES_ARRAY = [
+  POSTS_DB_TABLE_NAME,
+  POSTS_SYNC_DB_TABLE_NAME,
+  CACHE_TIME_LIMIT_TABLE_KEY
+]
 const TABLE_KEY_PATH = 'id'
 
 // sync manager keys, used for post background sync event tag
@@ -21,7 +26,7 @@ const SYNC_MANAGER_KEY_FOR_POST_SYNC = 'sync-new-post'
 // indexedDB cache table item ID
 const CACHE_TABLE_ITEM_ID = 'cache-item-id'
 
-const idbPromise = idb.open(POSTS_DB_STORE_NAME, 1, db => {
+const idbPromise = idb.open(POSTS_DB_STORE_NAME, INDEXED_DB_VERSION, db => {
   for (let i = 0; i < TABLES_ARRAY.length; i++) {
     const table = TABLES_ARRAY[i]
     console.log('[Utility.js] creating indexedDb table: ' + table)
@@ -29,6 +34,10 @@ const idbPromise = idb.open(POSTS_DB_STORE_NAME, 1, db => {
       db.createObjectStore(table, { keyPath: TABLE_KEY_PATH })
     }
   }
+})
+
+idbPromise.then(db => {
+  console.log('[Utility.js] db', db)
 })
 
 const writeDataInIndexDB = async (storeName, data) => {
