@@ -16,8 +16,11 @@ const canvasElement = document.querySelector('#canvas')
 const captureBtn = document.querySelector('#capture-btn')
 const imagePickerArea = document.querySelector('#pick-image')
 const imagePicker = document.querySelector('#image-picker')
+let selectedImage
 
 const initializeMedia = () => {
+  selectedImage = null
+
   if (!('mediaDevices' in navigator)) {
     navigator.mediaDevices = {}
   }
@@ -72,6 +75,8 @@ captureBtn.addEventListener('click', event => {
   videoPlayer.srcObject.getTracks().forEach(track => {
     track.stop()
   })
+
+  selectedImage = canvasElement.toDataURL()
 })
 
 function openCreatePostModal () {
@@ -138,8 +143,7 @@ createPostForm.addEventListener('submit', event => {
     id: new Date().toISOString(),
     title,
     location,
-    image:
-      'https://firebasestorage.googleapis.com/v0/b/pwa-cp.appspot.com/o/sf-boat.jpg?alt=media&token=eb466a4e-c360-46b0-bd49-41993eb627a0'
+    image: selectedImage
   }
 
   // check if SyncManager is available in window
