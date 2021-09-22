@@ -10,11 +10,16 @@ const serviceWorkerAvailableInNavigator = 'serviceWorker' in navigator
 const POSTS_DB_STORE_NAME = 'posts-store'
 const POSTS_DB_TABLE_NAME = 'posts'
 const POSTS_SYNC_DB_TABLE_NAME = 'sync-posts'
-const TABLES_ARRAY = [POSTS_DB_TABLE_NAME, POSTS_SYNC_DB_TABLE_NAME]
+// table key to store and check cache time limit
+const CACHE_TIME_LIMIT_TABLE_KEY = 'cache-time-limit'
+const TABLES_ARRAY = [POSTS_DB_TABLE_NAME, POSTS_SYNC_DB_TABLE_NAME, CACHE_TIME_LIMIT_TABLE_KEY]
 const TABLE_KEY_PATH = 'id'
 
-// sync manager keys
+// sync manager keys, used for post background sync event tag
 const SYNC_MANAGER_KEY_FOR_POST_SYNC = 'sync-new-post'
+
+// indexedDB cache table item ID
+const CACHE_TABLE_ITEM_ID = 'cache-item-id'
 
 const idbPromise = idb.open(POSTS_DB_STORE_NAME, 1, db => {
   for (let i = 0; i < TABLES_ARRAY.length; i++) {

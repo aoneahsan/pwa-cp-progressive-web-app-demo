@@ -3,14 +3,20 @@ importScripts('/src/js/idb.js')
 
 // Import scripts - custom
 importScripts('/src/js/utility.js')
-importScripts('/src/test.js')
 
 // cache keys vars
-// const CACHE_VERSION = 'v1'
-// const CACHE_VERSION = new Date().toISOString()
+const CACHE_VERSION = 'v1'
+const cachesStorageTimeLimitInDays = 1
+const timeToClearCache = cachesStorageTimeLimitInDays * 24 * 60 * 60
 const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`
 const DYNAMIC_CACHE_KEY = `dynamic-${CACHE_VERSION}`
 const OFFLINE_HTML_FILE = '/offline.html'
+// const CACHE_TIME_LIMIT = 2 * 24 * 60 * 60 * 1000 // 2 days  (day * hoursInDay * minutesInHour * secondsInMinute * millisecondsInSecond)
+const CACHE_TIME_LIMIT = 60 * 1000 // 60 seconds
+
+// indexedDB cache check table keys (also defined in utility.js)
+// const CACHE_TIME_LIMIT_TABLE_KEY = 'cache-time-limit'
+// const CACHE_TABLE_ITEM_ID = 'cache-item-id'
 
 // Install event
 self.addEventListener('install', event => {
@@ -68,6 +74,57 @@ self.addEventListener('fetch', event => {
             return cloneRes.json()
           })
           .then(data => {
+            // check and clear old cache
+            readDataFromIndexDB(CACHE_TIME_LIMIT_TABLE_KEY)
+              .then(data => {
+                console.log(
+                  '[Service Worker] cache check table data response, data: ',
+                  { data }
+                )
+                const currentTime = new Date().getTime()
+                const writeCacheCheckTimeInIndexedDB = () => {
+                  writeDataInIndexDB(CACHE_TIME_LIMIT_TABLE_KEY, {
+                    id: CACHE_TABLE_ITEM_ID,
+                    lastCheckTime: currentTime
+                  }).then(res => {
+                    console.log(
+                      '[Service Worker] cache check table first (only) item inserted'
+                    )
+                  })
+                }
+                if (data && data.length > 0) {
+                  const cacheCheckItem = data[0]
+                  const lastCheckTime = cacheCheckItem.lastCheckTime
+                  if (currentTime > lastCheckTime) {
+                    caches.delete(DYNAMIC_CACHE_KEY).then(res => {
+                      console.log(
+                        '[Service Worker] cache time limit check, cache deleted, res: ',
+                        { res }
+                      )
+
+                      deleteItemFromIndexDB(
+                        CACHE_TIME_LIMIT_TABLE_KEY,
+                        CACHE_TABLE_ITEM_ID
+                      ).then(res => {
+                        console.log(
+                          '[Service Worker] cache time limit indexedDB table item deleted, res: ',
+                          { res }
+                        )
+                        writeCacheCheckTimeInIndexedDB()
+                      })
+                    })
+                  }
+                } else {
+                  writeCacheCheckTimeInIndexedDB()
+                }
+              })
+              .catch(err => {
+                console.log(
+                  '[Service Worker] ERROR OCCURED, while getting data from cache check table, err',
+                  { err }
+                )
+              })
+            // store newly fetched posts from server
             for (const key in data) {
               if (Object.hasOwnProperty.call(data, key)) {
                 // writing data in indexedDB

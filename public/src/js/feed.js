@@ -11,10 +11,75 @@ const createPostForm = document.querySelector('#post-create-form')
 const createPostTitle = document.querySelector('#title')
 const createPostLocation = document.querySelector('#location')
 const snackBarContainer = document.querySelector('#confirmation-toast')
+const videoPlayer = document.querySelector('#player')
+const canvasElement = document.querySelector('#canvas')
+const captureBtn = document.querySelector('#capture-btn')
+const imagePickerArea = document.querySelector('#pick-image')
+const imagePicker = document.querySelector('#image-picker')
+
+const initializeMedia = () => {
+  if (!('mediaDevices' in navigator)) {
+    navigator.mediaDevices = {}
+  }
+
+  if (!('getUserMedia' in navigator.mediaDevices)) {
+    navigator.mediaDevices.getUserMedia = constraints => {
+      var getUserMedia =
+        navigator.webkitGetUserMedia || navigator.mozGetUserMedia
+
+      if (!getUserMedia) {
+        return Promise.reject(
+          new Error('getUserMedia not available on your browser')
+        )
+      }
+
+      return new Promise((resolve, reject) => {
+        getUserMedia.call(navigator, constraints, resolve, reject)
+      })
+    }
+  }
+
+  const constraints = {
+    video: true
+    // audio: true // not needed in our case
+  }
+  navigator.mediaDevices
+    .getUserMedia(constraints)
+    .then(videoStream => {
+      videoPlayer.style.display = 'block'
+      videoPlayer.srcObject = videoStream
+    })
+    .catch(err => {
+      imagePickerArea.style.display = 'block'
+    })
+}
+
+// capture button click listener
+captureBtn.addEventListener('click', event => {
+  videoPlayer.style.display = 'none'
+  captureBtn.style.display = 'none'
+  canvasElement.style.display = 'block'
+
+  const context = canvasElement.getContext('2d')
+  context.drawImage(
+    videoPlayer,
+    0,
+    0,
+    canvas.width,
+    videoPlayer.videoHeight / (videoPlayer.videoWidth / canvas.width)
+  )
+
+  videoPlayer.srcObject.getTracks().forEach(track => {
+    track.stop()
+  })
+})
 
 function openCreatePostModal () {
   // createPostArea.style.display = 'block'
   createPostArea.style.transform = 'translateY(0)'
+
+  // invoke initialize media function
+  initializeMedia()
 
   // SW Related Code
   // check if browser tried to prompt install pwa, if yes, then show install prompt now
@@ -43,6 +108,9 @@ function openCreatePostModal () {
 function closeCreatePostModal () {
   // createPostArea.style.display = 'none'
   createPostArea.style.transform = 'translateY(100vh)'
+  videoPlayer.style.display = 'none'
+  canvasElement.style.display = 'none'
+  imagePickerArea.style.display = 'none'
 }
 
 shareImageButton.addEventListener('click', openCreatePostModal)
