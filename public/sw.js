@@ -174,15 +174,22 @@ self.addEventListener('notificationclick', event => {
         const activeClient = allClients.find(el => {
           return el.visibilityState === 'visible'
         })
-        if (activeClient) {
-          activeClient.navigate(notification.data.url)
-          activeClient.focus()
-        } else {
-          activeClient.openWindow(notification.data.url)
+        console.log('[Service Worker] allClients, activeClient', {
+          allClients,
+          activeClient
+        })
+        if (notification && notification.data && notification.data.url) {
+          const postUrl = notification.data.url
+          if (activeClient !== undefined) {
+            activeClient.navigate(postUrl)
+            activeClient.focus()
+          } else {
+            clients.openWindow(postUrl)
+          }
         }
+        notification.close()
       })
     )
-    notification.close()
   }
 })
 // notification "x" close action (or user close notification) listener
