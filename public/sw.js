@@ -60,6 +60,57 @@ self.addEventListener('activate', event => {
   return self.clients.claim()
 })
 
+const checkAndClearOldCache = () => {
+  readDataFromIndexDB(CACHE_TIME_LIMIT_TABLE_KEY)
+    .then(data => {
+      console.log('[Service Worker] cache check table data response, data: ', {
+        data
+      })
+      const currentTime = new Date().getTime()
+      const writeCacheCheckTimeInIndexedDB = () => {
+        writeDataInIndexDB(CACHE_TIME_LIMIT_TABLE_KEY, {
+          id: CACHE_TABLE_ITEM_ID,
+          lastCheckTime: currentTime
+        }).then(res => {
+          console.log(
+            '[Service Worker] cache check table first (only) item inserted'
+          )
+        })
+      }
+      if (data && data.length > 0) {
+        const cacheCheckItem = data[0]
+        const lastCheckTime = cacheCheckItem.lastCheckTime
+        if (currentTime > lastCheckTime) {
+          caches.delete(DYNAMIC_CACHE_KEY).then(res => {
+            console.log(
+              '[Service Worker] cache time limit check, cache deleted, res: ',
+              { res }
+            )
+
+            deleteItemFromIndexDB(
+              CACHE_TIME_LIMIT_TABLE_KEY,
+              CACHE_TABLE_ITEM_ID
+            ).then(res => {
+              console.log(
+                '[Service Worker] cache time limit indexedDB table item deleted, res: ',
+                { res }
+              )
+              writeCacheCheckTimeInIndexedDB()
+            })
+          })
+        }
+      } else {
+        writeCacheCheckTimeInIndexedDB()
+      }
+    })
+    .catch(err => {
+      console.log(
+        '[Service Worker] ERROR OCCURED, while getting data from cache check table, err',
+        { err }
+      )
+    })
+}
+
 // Cache-First__Then-Network (request made to both at same time and network response update old cache)
 self.addEventListener('fetch', event => {
   if (!(event.request.url.indexOf('http') === 0)) return // skip the request. if request is not made with http protocol
@@ -75,55 +126,8 @@ self.addEventListener('fetch', event => {
           })
           .then(data => {
             // check and clear old cache
-            readDataFromIndexDB(CACHE_TIME_LIMIT_TABLE_KEY)
-              .then(data => {
-                console.log(
-                  '[Service Worker] cache check table data response, data: ',
-                  { data }
-                )
-                const currentTime = new Date().getTime()
-                const writeCacheCheckTimeInIndexedDB = () => {
-                  writeDataInIndexDB(CACHE_TIME_LIMIT_TABLE_KEY, {
-                    id: CACHE_TABLE_ITEM_ID,
-                    lastCheckTime: currentTime
-                  }).then(res => {
-                    console.log(
-                      '[Service Worker] cache check table first (only) item inserted'
-                    )
-                  })
-                }
-                if (data && data.length > 0) {
-                  const cacheCheckItem = data[0]
-                  const lastCheckTime = cacheCheckItem.lastCheckTime
-                  if (currentTime > lastCheckTime) {
-                    caches.delete(DYNAMIC_CACHE_KEY).then(res => {
-                      console.log(
-                        '[Service Worker] cache time limit check, cache deleted, res: ',
-                        { res }
-                      )
+            checkAndClearOldCache()
 
-                      deleteItemFromIndexDB(
-                        CACHE_TIME_LIMIT_TABLE_KEY,
-                        CACHE_TABLE_ITEM_ID
-                      ).then(res => {
-                        console.log(
-                          '[Service Worker] cache time limit indexedDB table item deleted, res: ',
-                          { res }
-                        )
-                        writeCacheCheckTimeInIndexedDB()
-                      })
-                    })
-                  }
-                } else {
-                  writeCacheCheckTimeInIndexedDB()
-                }
-              })
-              .catch(err => {
-                console.log(
-                  '[Service Worker] ERROR OCCURED, while getting data from cache check table, err',
-                  { err }
-                )
-              })
             // store newly fetched posts from server
             for (const key in data) {
               if (Object.hasOwnProperty.call(data, key)) {
@@ -182,7 +186,12 @@ self.addEventListener('sync', event => {
         .then(data => {
           for (let i = 0; i < data.length; i++) {
             const post = data[i]
-            sendDataToUrl(urlToPostsApiPost, post)
+            const postFormData = new FormData()
+            postFormData.append('id', post.id)
+            postFormData.append('title', post.title)
+            postFormData.append('location', post.location)
+            postFormData.append('image', post.image)
+            sendFormDataToUrl(urlToPostsApiPost, postFormData)
               .then(res => {
                 console.log(
                   '[Service Worker], data send using sync manager, api res: ',

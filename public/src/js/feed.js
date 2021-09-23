@@ -122,13 +122,20 @@ shareImageButton.addEventListener('click', openCreatePostModal)
 
 closeCreatePostModalButton.addEventListener('click', closeCreatePostModal)
 
+const resetCreatePostFormData = () => {
+  createPostTitle.value = ''
+  createPostLocation.value = ''
+  selectedImage = null
+}
+
 // Create Post Form Submit Handler
 createPostForm.addEventListener('submit', event => {
   event.preventDefault()
 
   if (
     createPostTitle.value.trim() == '' ||
-    createPostLocation.value.trim() == ''
+    createPostLocation.value.trim() == '' ||
+    !selectedImage
   ) {
     alert('Please enter valid data!')
     return
@@ -161,8 +168,8 @@ createPostForm.addEventListener('submit', event => {
         const data = { message: 'Post added in sync will be created shortly.' }
         snackBarContainer.MaterialSnackbar.showSnackbar(data)
 
-        createPostTitle.value = ''
-        createPostLocation.value = ''
+        // reset form data
+        resetCreatePostFormData()
       })
       .catch(err => {
         console.error(
@@ -170,12 +177,18 @@ createPostForm.addEventListener('submit', event => {
           err
         )
 
-        createPostTitle.value = ''
-        createPostLocation.value = ''
+        // reset form data
+        resetCreatePostFormData()
       })
   } else {
     // sync manager not available just try to send post
-    sendDataToUrl(urlToPostsApiPost, postData)
+    const postFormData = new FormData()
+    postFormData.append('id', postData.id)
+    postFormData.append('title', postData.title)
+    postFormData.append('location', postData.location)
+    postFormData.append('image', postData.image)
+
+    sendFormDataToUrl(urlToPostsApiPost, postFormData)
       .then(res => {
         updateCardsUi()
       })

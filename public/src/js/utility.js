@@ -89,6 +89,15 @@ const sendDataToUrl = async (url, data) => {
   })
 }
 
+const sendFormDataToUrl = async (url, formData) => {
+  return fetch(url, {
+    method: 'POST',
+    body: formData
+  }).then(res => {
+    return res.json()
+  })
+}
+
 const urlBase64ToUint8Array = base64String => {
   var padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   var base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
