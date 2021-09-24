@@ -1,0 +1,163 @@
+const express = require('express')
+
+const app = express()
+
+// Imports
+const functions = require('firebase-functions')
+const cors = require('cors')({ origin: true })
+const webPush = require('web-push')
+const admin = require('firebase-admin')
+const formidable = require('formidable')
+const UUID_V4 = require('uuid-v4')
+const fs = require('fs')
+const { Storage } = require('@google-cloud/storage')
+
+// Creating Admin Connection
+const serviceAccount = require('./pwa-firebase-keys.json')
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: 'https://pwa-cp-default-rtdb.firebaseio.com'
+})
+
+// Global Constants
+const POSTS_TABLE = 'posts'
+const SUBSCRIPTIONS_TABLE = 'subscriptions'
+
+// web push package constants
+const vapidPublicKey =
+  'BPgkv9lvuQWaZKfcUMirrqmhy713qC3rFoo5tz2enFdRfbrdRPFXo4pSB0twS-yjMvRu_G4fqwvq0vcJQwtdGq0'
+const vapidPrivateKey = 'wPPtBWDp6sFXMgAEYn4EzCAuREEUNPEPHDVqeLPoi2M'
+
+// google cloud storage constants
+const googleCloudStorageConfig = {
+  projectId: 'pwa-cp',
+  keyFilename: 'pwa-firebase-keys.json'
+}
+
+const dataURItoBlob = dataURI => {
+  var byteString = atob(dataURI.split(',')[1])
+  var mimeString = dataURI
+    .split(',')[0]
+    .split(':')[1]
+    .split(';')[0]
+  var ab = new ArrayBuffer(byteString.length)
+  var ia = new Uint8Array(ab)
+  for (var i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i)
+  }
+  var blob = new Blob([ab], { type: mimeString })
+  return blob
+}
+
+app.post('/postdata', (req, res, next) => {
+  cors(req, res, () => {
+    const uuid = UUID_V4()
+    const formData = formidable.IncomingForm()
+    const gcStorage = new Storage(googleCloudStorageConfig)
+    formData.parse(req, (err, fields, files) => {
+      console.log('formData', { err, fields, files })
+      if (err) {
+        console.error(
+          'Error Occured while parsing formData, formidable, err:',
+          err
+        )
+        res.status(500).json({ error: err, message: err.message })
+      } else {
+        const { id, title, location } = fields
+        const { image } = files
+
+        fs.rename(image.path, '/tmp/' + image.name, err => {
+          if (err) {
+            console.error('Error Occured while renaming file, err:', err)
+            res.status(500).json({ error: err, message: err.message })
+          }
+          const bucket = gcStorage.bucket('pwa-cp.appspot.com')
+
+          bucket.upload(
+            '/tmp/' + image.name,
+            {
+              uploadType: 'media',
+              metadata: {
+                metadata: {
+                  contentType: image.type,
+                  firebaseStorageDownloadTokens: uuid
+                }
+              }
+            },
+            (err, uploadedFile) => {
+              if (err) {
+                console.error(
+                  'Error Occured while uploading file to bucket, err:',
+                  err
+                )
+                res.status(500).json({ error: err, message: err.message })
+              } else {
+                const postData = {
+                  id,
+                  title,
+                  location,
+                  image: `https://firebasestorage.googleapis.com/v0/b/${
+                    bucket.name
+                  }/o/${encodeURIComponent(
+                    uploadedFile.name
+                  )}?alt=media&token=${uuid}`
+                }
+                admin
+                  .database()
+                  .ref(POSTS_TABLE)
+                  .push(postData)
+                  .then(res => {
+                    return admin
+                      .database()
+                      .ref(SUBSCRIPTIONS_TABLE)
+                      .once('value')
+                  })
+                  .then(subScriptions => {
+                    // define webpush vapid details
+                    webPush.setVapidDetails(
+                      'mailto:aoneahsan@gmail.com',
+                      vapidPublicKey,
+                      vapidPrivateKey
+                    )
+
+                    // send web push notification to add subscriptions
+                    subScriptions.forEach(sub => {
+                      const pushConfig = sub.val()
+                      const pushData = JSON.stringify({
+                        title: 'Post Created!',
+                        content: 'New post created successfully.',
+                        url: 'http://localhost:8080/help'
+                      })
+                      webPush
+                        .sendNotification(pushConfig, pushData)
+                        .catch(err => {
+                          console.error(
+                            '[Index.js] error while sending web push notification, err: ',
+                            err
+                          )
+                        })
+                    })
+
+                    // send res
+                    res.status(201).json({ message: 'Data Stored.', id: id })
+                  })
+                  .catch(err => {
+                    console.error(
+                      'Error Occured while storing data in database, err:',
+                      err
+                    )
+                    res.status(500).json({ error: err, message: err.message })
+                  })
+              }
+            }
+          )
+        })
+      }
+    })
+  })
+})
+
+const PORT = process.env.PORT || 4001
+app.listen(PORT, () => {
+  console.log(`Server started at http://localhost:${PORT}`)
+})

@@ -5,7 +5,7 @@ importScripts('/src/js/idb.js')
 importScripts('/src/js/utility.js')
 
 // cache keys vars
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v2'
 const cachesStorageTimeLimitInDays = 1
 const timeToClearCache = cachesStorageTimeLimitInDays * 24 * 60 * 60
 const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`
@@ -190,7 +190,8 @@ self.addEventListener('sync', event => {
             postFormData.append('id', post.id)
             postFormData.append('title', post.title)
             postFormData.append('location', post.location)
-            postFormData.append('image', post.image)
+            postFormData.append('image', post.image, post.id + '.png')
+
             sendFormDataToUrl(urlToPostsApiPost, postFormData)
               .then(res => {
                 console.log(

@@ -7,7 +7,8 @@
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "wpgk": "web-push generate-vapid-keys"
+    "wpgk": "web-push generate-vapid-keys",
+    "start_node": "nodemon node_server.js"
   },
   "engines": {
     "node": "14"
@@ -16,6 +17,7 @@
   "dependencies": {
     "@google-cloud/storage": "^5.14.3",
     "cors": "^2.8.5",
+    "express": "^4.17.1",
     "firebase-admin": "^9.11.1",
     "firebase-functions": "^3.14.1",
     "formidable": "^1.2.2",

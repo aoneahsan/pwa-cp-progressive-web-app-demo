@@ -50,6 +50,7 @@ const initializeMedia = () => {
     .getUserMedia(constraints)
     .then(videoStream => {
       videoPlayer.style.display = 'block'
+      captureBtn.style.display = 'block'
       videoPlayer.srcObject = videoStream
     })
     .catch(err => {
@@ -76,7 +77,8 @@ captureBtn.addEventListener('click', event => {
     track.stop()
   })
 
-  selectedImage = canvasElement.toDataURL()
+  const imageBase64Url = canvasElement.toDataURL()
+  selectedImage = dataURItoBlob(imageBase64Url)
 })
 
 function openCreatePostModal () {
@@ -186,19 +188,48 @@ createPostForm.addEventListener('submit', event => {
     postFormData.append('id', postData.id)
     postFormData.append('title', postData.title)
     postFormData.append('location', postData.location)
-    postFormData.append('image', postData.image)
+    postFormData.append('image', postData.image, postData.id + '.png')
 
     sendFormDataToUrl(urlToPostsApiPost, postFormData)
       .then(res => {
-        updateCardsUi()
+        const data = { message: 'Post created successfully.' }
+        snackBarContainer.MaterialSnackbar.showSnackbar(data)
+
+        // reset form data
+        resetCreatePostFormData()
       })
       .catch(err => {
         console.error(
           'Error while storing/sending data in server, error: ',
           err
         )
+        alert('Error occured while creating post.')
+        resetCreatePostFormData()
       })
   }
+
+  // for node server testing
+  // const postFormData = new FormData()
+  // postFormData.append('id', postData.id)
+  // postFormData.append('title', postData.title)
+  // postFormData.append('location', postData.location)
+  // postFormData.append('image', postData.image, postData.id + '.png')
+
+  // const nodeServerUrl = 'http://localhost:4001/postdata'
+  // sendFormDataToUrl(nodeServerUrl, postFormData)
+  //   .then(res => {
+  //     console.log('Post data sent to server res: ', res)
+  //     const data = { message: 'Post created successfully.' }
+  //     snackBarContainer.MaterialSnackbar.showSnackbar(data)
+
+  //     // reset form data
+  //     resetCreatePostFormData()
+  //   })
+  //   .catch(err => {
+  //     console.error('Error while storing/sending data in server, error: ', err)
+  //     alert('Error occured while creating post.')
+  //     resetCreatePostFormData()
+  //   })
 })
 
 // UI Cards
