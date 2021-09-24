@@ -5,7 +5,7 @@ importScripts('/src/js/idb.js')
 importScripts('/src/js/utility.js')
 
 // cache keys vars
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v3'
 const cachesStorageTimeLimitInDays = 1
 const timeToClearCache = cachesStorageTimeLimitInDays * 24 * 60 * 60
 const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`

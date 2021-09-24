@@ -116,6 +116,7 @@ locationBtn.addEventListener('click', event => {
 
       createPostLocation.value = 'In Lahore'
       manualLocationArea.classList.add('is-foused')
+      locationLoader.style.display = 'none'
     },
     err => {
       console.error(
@@ -132,8 +133,10 @@ locationBtn.addEventListener('click', event => {
 })
 
 function openCreatePostModal () {
-  // createPostArea.style.display = 'block'
-  createPostArea.style.transform = 'translateY(0)'
+  setTimeout(() => {
+    // createPostArea.style.display = 'block'
+    createPostArea.style.transform = 'translateY(0)'
+  }, 1)
 
   // invoke initialize media function
   initializeMedia()
@@ -166,11 +169,18 @@ function openCreatePostModal () {
 }
 
 function closeCreatePostModal () {
-  // createPostArea.style.display = 'none'
-  createPostArea.style.transform = 'translateY(100vh)'
+  setTimeout(() => {
+    // createPostArea.style.display = 'none'
+    createPostArea.style.transform = 'translateY(100vh)'
+  }, 1)
   videoPlayer.style.display = 'none'
   canvasElement.style.display = 'none'
   imagePickerArea.style.display = 'none'
+  if (videoPlayer.srcObject) {
+    videoPlayer.srcObject.getTracks().forEach(track => {
+      track.stop()
+    })
+  }
 }
 
 shareImageButton.addEventListener('click', openCreatePostModal)
