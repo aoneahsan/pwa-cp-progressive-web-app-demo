@@ -1,333 +1,229 @@
-// Import scripts - third-party
-importScripts('/src/js/idb.js')
+/**
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-// Import scripts - custom
-importScripts('/src/js/utility.js')
-
-// cache keys vars
-const CACHE_VERSION = 'v3'
-const cachesStorageTimeLimitInDays = 1
-const timeToClearCache = cachesStorageTimeLimitInDays * 24 * 60 * 60
-const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`
-const DYNAMIC_CACHE_KEY = `dynamic-${CACHE_VERSION}`
-const OFFLINE_HTML_FILE = '/offline.html'
-// const CACHE_TIME_LIMIT = 2 * 24 * 60 * 60 * 1000 // 2 days  (day * hoursInDay * minutesInHour * secondsInMinute * millisecondsInSecond)
-const CACHE_TIME_LIMIT = 60 * 1000 // 60 seconds
-
-// indexedDB cache check table keys (also defined in utility.js)
-// const CACHE_TIME_LIMIT_TABLE_KEY = 'cache-time-limit'
-// const CACHE_TABLE_ITEM_ID = 'cache-item-id'
-
-// Install event
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE_KEY).then(cache => {
-      // after cache.addAll
-      cache.addAll([
-        '/',
-        '/index.html',
-        OFFLINE_HTML_FILE,
-        '/src/js/material.min.js',
-        '/src/js/promise.js',
-        '/src/js/fetch.js',
-        '/src/js/idb.js',
-        '/src/js/utility.js',
-        '/src/js/app.js',
-        '/src/js/feed.js',
-        '/src/css/app.css',
-        '/src/css/feed.css',
-        '/src/images/main-image.jpg',
-        'https://fonts.googleapis.com/css?family=Roboto:400,700',
-        'https://fonts.googleapis.com/icon?family=Material+Icons',
-        'https://cdnjs.cloudflare.com/ajax/libs/material-design-lite/1.3.0/material.indigo-pink.min.css'
-      ])
-    })
-  )
-})
-
-// Activate event
-self.addEventListener('activate', event => {
-  // clear old caches
-  event.waitUntil(
-    caches.keys().then(keys => {
-      return Promise.all(
-        keys.map(key => {
-          if (key !== STATIC_CACHE_KEY && key !== DYNAMIC_CACHE_KEY) {
-            return caches.delete(key)
-          }
-        })
-      )
-    })
-  )
-  return self.clients.claim()
-})
-
-const checkAndClearOldCache = () => {
-  readDataFromIndexDB(CACHE_TIME_LIMIT_TABLE_KEY)
-    .then(data => {
-      console.log('[Service Worker] cache check table data response, data: ', {
-        data
-      })
-      const currentTime = new Date().getTime()
-      const writeCacheCheckTimeInIndexedDB = () => {
-        writeDataInIndexDB(CACHE_TIME_LIMIT_TABLE_KEY, {
-          id: CACHE_TABLE_ITEM_ID,
-          lastCheckTime: currentTime
-        }).then(res => {
-          console.log(
-            '[Service Worker] cache check table first (only) item inserted'
-          )
-        })
-      }
-      if (data && data.length > 0) {
-        const cacheCheckItem = data[0]
-        const lastCheckTime = cacheCheckItem.lastCheckTime
-        if (currentTime > lastCheckTime) {
-          caches.delete(DYNAMIC_CACHE_KEY).then(res => {
-            console.log(
-              '[Service Worker] cache time limit check, cache deleted, res: ',
-              { res }
-            )
-
-            deleteItemFromIndexDB(
-              CACHE_TIME_LIMIT_TABLE_KEY,
-              CACHE_TABLE_ITEM_ID
-            ).then(res => {
-              console.log(
-                '[Service Worker] cache time limit indexedDB table item deleted, res: ',
-                { res }
-              )
-              writeCacheCheckTimeInIndexedDB()
-            })
-          })
-        }
-      } else {
-        writeCacheCheckTimeInIndexedDB()
-      }
-    })
-    .catch(err => {
-      console.log(
-        '[Service Worker] ERROR OCCURED, while getting data from cache check table, err',
-        { err }
-      )
-    })
-}
-
-// Cache-First__Then-Network (request made to both at same time and network response update old cache)
-self.addEventListener('fetch', event => {
-  if (!(event.request.url.indexOf('http') === 0)) return // skip the request. if request is not made with http protocol
-
-  if (event.request.url.indexOf(urlToPostsApiGet) > -1) {
-    event.respondWith(
-      fetch(event.request).then(response => {
-        const cloneRes = response.clone()
-        // clearing complete table data before adding new one
-        clearStoreDataIndexDB(POSTS_DB_TABLE_NAME)
-          .then(() => {
-            return cloneRes.json()
-          })
-          .then(data => {
-            // check and clear old cache
-            checkAndClearOldCache()
-
-            // store newly fetched posts from server
-            for (const key in data) {
-              if (Object.hasOwnProperty.call(data, key)) {
-                // writing data in indexedDB
-                writeDataInIndexDB(POSTS_DB_TABLE_NAME, data[key])
-                  .then(res => {
-                    // console.log(
-                    //   "[Service Worker]: sorting json data received from fetch request in indexedDB, res: ",
-                    //   res
-                    // );
-                  })
-                  .catch(err => {
-                    console.error(
-                      '[Service Worker]: ERROR while sorting json data received from fetch request in indexedDB, err: ',
-                      err
-                    )
-                  })
-              }
-            }
-          })
-        return response
-      })
-    )
-  } else {
-    event.respondWith(
-      caches.match(event.request).then(result => {
-        if (result) {
-          return result
-        } else {
-          return fetch(event.request)
-            .then(response => {
-              return caches.open(DYNAMIC_CACHE_KEY).then(cache => {
-                // disabled because want to add save button on card
-                cache.put(event.request.url, response.clone())
-                return response
-              })
-            })
-            .catch(err => {
-              return caches.open(STATIC_CACHE_KEY).then(cache => {
-                if (event.request.headers.get('accept').includes('text/html')) {
-                  return cache.match(OFFLINE_HTML_FILE)
-                }
-              })
-            })
-        }
-      })
-    )
-  }
-})
-
-// listen for background sync events
-self.addEventListener('sync', event => {
-  console.log('[Service Worker] sync event received, event: ', event)
-  if (event.tag === SYNC_MANAGER_KEY_FOR_POST_SYNC) {
-    event.waitUntil(
-      readDataFromIndexDB(POSTS_SYNC_DB_TABLE_NAME)
-        .then(data => {
-          console.log(
-            `[Service Worker] sync event reading data from ${POSTS_SYNC_DB_TABLE_NAME}, data: `,
-            data,
-            data.length
-          )
-          for (let i = 0; i < data.length; i++) {
-            const post = data[i]
-            const postFormData = new FormData()
-            postFormData.append('id', post.id)
-            postFormData.append('title', post.title)
-            postFormData.append('location', post.location)
-            postFormData.append('image', post.image, post.id + '.png')
-            postFormData.append('userLocationCoords', post.userLocationCoords)
-            console.log(
-              `[Service Worker] sync event looping data read from ${POSTS_SYNC_DB_TABLE_NAME}, current loop item, post: `,
-              post,
-              postFormData
-            )
-
-            sendFormDataToUrl(urlToPostsApiPost, postFormData)
-              .then(res => {
-                console.log(
-                  '[Service Worker], data send using sync manager, api res: ',
-                  res
-                )
-                // delete data from local indexedDB
-                deleteItemFromIndexDB(POSTS_SYNC_DB_TABLE_NAME, res.id).then(
-                  res => {
-                    console.log(
-                      '[Service Worker], data deleted after sorting in server, res: ',
-                      res
-                    )
-                  }
-                )
-              })
-              .catch(err => {
-                console.error(
-                  '[Service Worker], ERROR OCCURED while sending data using sync manager, api err: ',
-                  err
-                )
-              })
-          }
-        })
-        .catch(err => {
-          console.error(
-            `[Service Worker] Error occured while reading data from ${POSTS_SYNC_DB_TABLE_NAME}, err: `,
-            err
-          )
-        })
-    )
-  }
-})
-
-// listen for notification actions
-// notification actions click listener
-self.addEventListener('notificationclick', event => {
-  const notification = event.notification
-  const action = event.action
-  console.log('[Service Worker] notificationclick event', {
-    notification,
-    action
-  })
-  if (action === 'cancel') {
-    notification.close()
-  } else {
-    // other case is confirm (or if not buttons shown to user then simple click on notification)
-
-    // open notification url
-    event.waitUntil(
-      clients.matchAll().then(allClients => {
-        const activeClient = allClients.find(el => {
-          return el.visibilityState === 'visible'
-        })
-        console.log('[Service Worker] allClients, activeClient', {
-          allClients,
-          activeClient
-        })
-        if (notification && notification.data && notification.data.url) {
-          const postUrl = notification.data.url
-          if (activeClient !== undefined) {
-            activeClient.navigate(postUrl)
-            activeClient.focus()
-          } else {
-            clients.openWindow(postUrl)
-          }
-        }
-        notification.close()
-      })
-    )
-  }
-})
-// notification "x" close action (or user close notification) listener
-self.addEventListener('notificationclose', event => {
-  const notification = event.notification
-
-  console.log('[Service Worker] notificationclose event', {
-    notification
-  })
-})
-
-// listener for web push notifications
-self.addEventListener('push', event => {
-  console.log('[Service Worker] new web push notification event: ', event)
-
-  let data = {
-    title: 'NEW!',
-    content: 'new new new :)(:',
-    url: 'http://localhost:8080/should-get-url-from-server'
-  }
-
-  if (event.data) {
-    // payload send by push notification
-    data = JSON.parse(event.data.text())
-  }
-
-  const options = {
-    body: data.content,
-    icon: '/src/images/icons/app-icon-96x96.png',
-    badge: '/src/images/icons/app-icon-96x96.png',
-    dir: 'ltr',
-    lang: 'en-US',
-    vibrate: [100, 50, 200],
-    tag: 'pwa-web-push-notification', // tag to group notifications, new notification of this tag will go beneth top one
-    renotify: true, // normally used together work "tag", as new notification will atleast vibrate phone again.
-    actions: [
-      {
-        action: 'confirm', // id-of-notification
-        title: 'Okay',
-        icon: '/src/images/icons/app-icon-96x96.png'
-      },
-      {
-        action: 'cancel',
-        title: 'Cancel',
-        icon: '/src/images/icons/app-icon-96x96.png'
-      }
-    ],
-    data: {
-      url: data.url
+// If the loader is already loaded, just stop.
+if (!self.define) {
+  const singleRequire = name => {
+    if (name !== 'require') {
+      name = name + '.js';
     }
-  }
+    let promise = Promise.resolve();
+    if (!registry[name]) {
+      
+        promise = new Promise(async resolve => {
+          if ("document" in self) {
+            const script = document.createElement("script");
+            script.src = name;
+            document.head.appendChild(script);
+            script.onload = resolve;
+          } else {
+            importScripts(name);
+            resolve();
+          }
+        });
+      
+    }
+    return promise.then(() => {
+      if (!registry[name]) {
+        throw new Error(`Module ${name} didn’t register its module`);
+      }
+      return registry[name];
+    });
+  };
 
-  // show notification
-  self.registration.showNotification(data.title, options)
-})
+  const require = (names, resolve) => {
+    Promise.all(names.map(singleRequire))
+      .then(modules => resolve(modules.length === 1 ? modules[0] : modules));
+  };
+  
+  const registry = {
+    require: Promise.resolve(require)
+  };
+
+  self.define = (moduleName, depsNames, factory) => {
+    if (registry[moduleName]) {
+      // Module is already loading or loaded.
+      return;
+    }
+    registry[moduleName] = Promise.resolve().then(() => {
+      let exports = {};
+      const module = {
+        uri: location.origin + moduleName.slice(1)
+      };
+      return Promise.all(
+        depsNames.map(depName => {
+          switch(depName) {
+            case "exports":
+              return exports;
+            case "module":
+              return module;
+            default:
+              return singleRequire(depName);
+          }
+        })
+      ).then(deps => {
+        const facValue = factory(...deps);
+        if(!exports.default) {
+          exports.default = facValue;
+        }
+        return exports;
+      });
+    });
+  };
+}
+define("./sw.js",['./workbox-a18b5387'], (function (workbox) { 'use strict';
+
+  /**
+  * Welcome to your Workbox-powered service worker!
+  *
+  * You'll need to register this file in your web app.
+  * See https://goo.gl/nhQhGp
+  *
+  * The rest of the code is auto-generated. Please don't update this file
+  * directly; instead, make changes to your Workbox build configuration
+  * and re-run your build process.
+  * See https://goo.gl/2aRDsh
+  */
+
+  self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+      self.skipWaiting();
+    }
+  });
+  /**
+   * The precacheAndRoute() method efficiently caches and responds to
+   * requests for URLs in the manifest.
+   * See https://goo.gl/S9QRab
+   */
+
+  workbox.precacheAndRoute([{
+    "url": "404.html",
+    "revision": "94df4892a6afef15e34bf6d08d3c649e"
+  }, {
+    "url": "favicon.ico",
+    "revision": "2cab47d9e04d664d93c8d91aec59e812"
+  }, {
+    "url": "help/index.html",
+    "revision": "a0afc58f57740ef24facdb89e1ef233f"
+  }, {
+    "url": "index.html",
+    "revision": "7300724b978d410e9098859acd909e6b"
+  }, {
+    "url": "manifest.json",
+    "revision": "007aa7d5a12c8fc065825f13dac75442"
+  }, {
+    "url": "offline.html",
+    "revision": "71ab3d2cc9c3ec8f98e7784c77216030"
+  }, {
+    "url": "src/css/app.css",
+    "revision": "59d917c544c1928dd9a9e1099b0abd71"
+  }, {
+    "url": "src/css/feed.css",
+    "revision": "a816281aae948687860e3c591de24130"
+  }, {
+    "url": "src/css/help.css",
+    "revision": "1c6d81b27c9d423bece9869b07a7bd73"
+  }, {
+    "url": "src/images/icons/app-icon-144x144.png",
+    "revision": "83011e228238e66949f0aa0f28f128ef"
+  }, {
+    "url": "src/images/icons/app-icon-192x192.png",
+    "revision": "f927cb7f94b4104142dd6e65dcb600c1"
+  }, {
+    "url": "src/images/icons/app-icon-256x256.png",
+    "revision": "86c18ed2761e15cd082afb9a86f9093d"
+  }, {
+    "url": "src/images/icons/app-icon-384x384.png",
+    "revision": "fbb29bd136322381cc69165fd094ac41"
+  }, {
+    "url": "src/images/icons/app-icon-48x48.png",
+    "revision": "45eb5bd6e938c31cb371481b4719eb14"
+  }, {
+    "url": "src/images/icons/app-icon-512x512.png",
+    "revision": "d42d62ccce4170072b28e4ae03a8d8d6"
+  }, {
+    "url": "src/images/icons/app-icon-96x96.png",
+    "revision": "56420472b13ab9ea107f3b6046b0a824"
+  }, {
+    "url": "src/images/icons/apple-icon-114x114.png",
+    "revision": "74061872747d33e4e9f202bdefef8f03"
+  }, {
+    "url": "src/images/icons/apple-icon-120x120.png",
+    "revision": "abd1cfb1a51ebe8cddbb9ada65cde578"
+  }, {
+    "url": "src/images/icons/apple-icon-144x144.png",
+    "revision": "b4b4f7ced5a981dcd18cb2dc9c2b215a"
+  }, {
+    "url": "src/images/icons/apple-icon-152x152.png",
+    "revision": "841f96b69f9f74931d925afb3f64a9c2"
+  }, {
+    "url": "src/images/icons/apple-icon-180x180.png",
+    "revision": "2e5e6e6f2685236ab6b0c59b0faebab5"
+  }, {
+    "url": "src/images/icons/apple-icon-57x57.png",
+    "revision": "cc93af251fd66d09b099e90bfc0427a8"
+  }, {
+    "url": "src/images/icons/apple-icon-60x60.png",
+    "revision": "18b745d372987b94d72febb4d7b3fd70"
+  }, {
+    "url": "src/images/icons/apple-icon-72x72.png",
+    "revision": "b650bbe358908a2b217a0087011266b5"
+  }, {
+    "url": "src/images/icons/apple-icon-76x76.png",
+    "revision": "bf10706510089815f7bacee1f438291c"
+  }, {
+    "url": "src/images/main-image-lg.jpg",
+    "revision": "c154b4e91c6d78a2b3e4007c6b2d2a6a"
+  }, {
+    "url": "src/images/main-image-sm.jpg",
+    "revision": "3dfa54e1417cb377e6d58b3880927cd6"
+  }, {
+    "url": "src/images/main-image.jpg",
+    "revision": "d36dc7dea3dc80f738ecf816dca915eb"
+  }, {
+    "url": "src/images/sf-boat.jpg",
+    "revision": "0f282d64b0fb306daf12050e812d6a19"
+  }, {
+    "url": "src/js/app.js",
+    "revision": "7ed60883a191bdbfad7cd9da7691d5d0"
+  }, {
+    "url": "src/js/feed.js",
+    "revision": "f6c605ad1392ef91da97d484dd602687"
+  }, {
+    "url": "src/js/fetch.js",
+    "revision": "6b82fbb55ae19be4935964ae8c338e92"
+  }, {
+    "url": "src/js/idb.js",
+    "revision": "017ced36d82bea1e08b08393361e354d"
+  }, {
+    "url": "src/js/material.min.js",
+    "revision": "713af0c6ce93dbbce2f00bf0a98d0541"
+  }, {
+    "url": "src/js/promise.js",
+    "revision": "10c2238dcd105eb23f703ee53067417f"
+  }, {
+    "url": "src/js/utility.js",
+    "revision": "e815873f06b14c131315d0fadad1ebf5"
+  }, {
+    "url": "sw-old.js",
+    "revision": "01647dd73e38ddc36cca8aed9ce35ede"
+  }, {
+    "url": "video-test.html",
+    "revision": "4df43b42a8d0878b0d0d28731423437c"
+  }], {
+    "ignoreURLParametersMatching": [/^utm_/, /^fbclid$/]
+  });
+  workbox.cleanupOutdatedCaches();
+
+}));
+//# sourceMappingURL=sw.js.map
