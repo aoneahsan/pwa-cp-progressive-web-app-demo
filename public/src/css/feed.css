@@ -61,7 +61,7 @@
   margin: auto;
 }
 
-#create-post #pick-image {
+#create-post #pick-image, #location-loader {
   display: none;
 }
 

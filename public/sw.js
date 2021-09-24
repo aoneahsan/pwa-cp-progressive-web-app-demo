@@ -199,6 +199,7 @@ self.addEventListener('sync', event => {
             postFormData.append('title', post.title)
             postFormData.append('location', post.location)
             postFormData.append('image', post.image, post.id + '.png')
+            postFormData.append('userLocationCoords', post.userLocationCoords)
             console.log(
               `[Service Worker] sync event looping data read from ${POSTS_SYNC_DB_TABLE_NAME}, current loop item, post: `,
               post,

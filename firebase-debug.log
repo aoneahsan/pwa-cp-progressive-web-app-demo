@@ -1,0 +1,17 @@
+[debug] [2021-09-24T17:33:23.069Z] ----------------------------------------------------------------------
+[debug] [2021-09-24T17:33:23.071Z] Command:       /home/ahsan/.nvm/versions/node/v14.17.5/bin/node /usr/local/bin/firebase deploy
+[debug] [2021-09-24T17:33:23.071Z] CLI Version:   9.18.0
+[debug] [2021-09-24T17:33:23.071Z] Platform:      linux
+[debug] [2021-09-24T17:33:23.071Z] Node Version:  v14.17.5
+[debug] [2021-09-24T17:33:23.072Z] Time:          Fri Sep 24 2021 22:33:23 GMT+0500 (Pakistan Standard Time)
+[debug] [2021-09-24T17:33:23.072Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2021-09-24T17:33:23.124Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2021-09-24T17:33:23.124Z] > authorizing via signed-in user (aoneahsan@gmail.com)
+[debug] [2021-09-24T17:33:23.124Z] [iam] checking project pwa-cp for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2021-09-24T17:33:23.126Z] > refreshing access token with scopes: ["email","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","openid"]
+[debug] [2021-09-24T17:33:23.127Z] >>> HTTP REQUEST POST https://www.googleapis.com/oauth2/v3/token  
+ <request body omitted>
+[debug] [2021-09-24T17:33:24.344Z] <<< HTTP RESPONSE 200 {"cache-control":"no-cache, no-store, max-age=0, must-revalidate","date":"Fri, 24 Sep 2021 17:33:24 GMT","expires":"Mon, 01 Jan 1990 00:00:00 GMT","pragma":"no-cache","content-type":"application/json; charset=utf-8","vary":"X-Origin, Referer, Origin,Accept-Encoding","server":"scaffolding on HTTPServer2","x-xss-protection":"0","x-frame-options":"SAMEORIGIN","x-content-type-options":"nosniff","alt-svc":"h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000,h3-T051=\":443\"; ma=2592000,h3-Q050=\":443\"; ma=2592000,h3-Q046=\":443\"; ma=2592000,h3-Q043=\":443\"; ma=2592000,quic=\":443\"; ma=2592000; v=\"46,43\"","accept-ranges":"none","transfer-encoding":"chunked"}
+[debug] [2021-09-24T17:33:24.363Z] >>> HTTP REQUEST POST https://cloudresourcemanager.googleapis.com/v1/projects/pwa-cp:testIamPermissions  
+ {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}

@@ -10,6 +10,7 @@ const sharedMomentsArea = document.querySelector('#shared-moments')
 const createPostForm = document.querySelector('#post-create-form')
 const createPostTitle = document.querySelector('#title')
 const createPostLocation = document.querySelector('#location')
+const manualLocationArea = document.querySelector('#manual-location')
 const snackBarContainer = document.querySelector('#confirmation-toast')
 const videoPlayer = document.querySelector('#player')
 const canvasElement = document.querySelector('#canvas')
@@ -17,6 +18,9 @@ const captureBtn = document.querySelector('#capture-btn')
 const imagePickerArea = document.querySelector('#pick-image')
 const imagePicker = document.querySelector('#image-picker')
 let selectedImage
+const locationBtn = document.querySelector('#location-btn')
+const locationLoader = document.querySelector('#location-loader')
+let userLocationCoords
 
 const initializeMedia = () => {
   selectedImage = null
@@ -58,6 +62,20 @@ const initializeMedia = () => {
     })
 }
 
+const initializeLocation = () => {
+  if (!('geolocation' in navigator)) {
+    locationBtn.style.display = 'none'
+    return
+  } else {
+    locationBtn.style.display = 'inline'
+    locationLoader.style.display = 'none'
+  }
+}
+
+imagePicker.addEventListener('change', event => {
+  selectedImage = event.target.files[0]
+})
+
 // capture button click listener
 captureBtn.addEventListener('click', event => {
   videoPlayer.style.display = 'none'
@@ -81,12 +99,47 @@ captureBtn.addEventListener('click', event => {
   selectedImage = dataURItoBlob(imageBase64Url)
 })
 
+// pic location btn click listener
+locationBtn.addEventListener('click', event => {
+  if (!('geolocation' in navigator)) {
+    locationBtn.style.display = 'none'
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      locationBtn.style.display = 'none'
+      locationLoader.style.display = 'block'
+      userLocationCoords = position.coords
+      // google api to get reverse geocoding address
+      // https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
+
+      createPostLocation.value = 'In Lahore'
+      manualLocationArea.classList.add('is-foused')
+    },
+    err => {
+      console.error(
+        '[Feed.js] Error occured while getting user location, err: ',
+        err
+      )
+      locationBtn.style.display = 'none'
+      locationLoader.style.display = 'none'
+      userLocationCoords = null
+      alert('Error occured while getting user location.')
+    },
+    { timeout: 7000 }
+  )
+})
+
 function openCreatePostModal () {
   // createPostArea.style.display = 'block'
   createPostArea.style.transform = 'translateY(0)'
 
   // invoke initialize media function
   initializeMedia()
+
+  // invoke initialize location function
+  initializeLocation()
 
   // SW Related Code
   // check if browser tried to prompt install pwa, if yes, then show install prompt now
@@ -128,6 +181,7 @@ const resetCreatePostFormData = () => {
   createPostTitle.value = ''
   createPostLocation.value = ''
   selectedImage = null
+  userLocationCoords = null
 }
 
 // Create Post Form Submit Handler
@@ -152,7 +206,8 @@ createPostForm.addEventListener('submit', event => {
     id: new Date().toISOString(),
     title,
     location,
-    image: selectedImage
+    image: selectedImage,
+    userLocationCoords: JSON.stringify(userLocationCoords)
   }
 
   // check if SyncManager is available in window
@@ -189,6 +244,7 @@ createPostForm.addEventListener('submit', event => {
     postFormData.append('title', postData.title)
     postFormData.append('location', postData.location)
     postFormData.append('image', postData.image, postData.id + '.png')
+    postFormData.append('userLocationCoords', postData.userLocationCoords)
 
     sendFormDataToUrl(urlToPostsApiPost, postFormData)
       .then(res => {
@@ -214,6 +270,7 @@ createPostForm.addEventListener('submit', event => {
   // postFormData.append('title', postData.title)
   // postFormData.append('location', postData.location)
   // postFormData.append('image', postData.image, postData.id + '.png')
+  // postFormData.append('userLocationCoords', postData.userLocationCoords)
 
   // const nodeServerUrl = 'http://localhost:4001/postdata'
   // sendFormDataToUrl(nodeServerUrl, postFormData)
