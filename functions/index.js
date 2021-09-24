@@ -1,6 +1,8 @@
 // Imports
 const functions = require('firebase-functions')
-const cors = require('cors')({ origin: true })
+const cors = require('cors')({
+  origin: true
+})
 const webPush = require('web-push')
 const admin = require('firebase-admin')
 const formidable = require('formidable')
@@ -35,14 +37,14 @@ exports.storePostData = functions.https.onRequest((request, response) => {
     const uuid = UUID_V4()
     const formData = formidable.IncomingForm()
     const gcStorage = new Storage(googleCloudStorageConfig)
-    formData.parse(req, (err, fields, files) => {
+    formData.parse(request, (err, fields, files) => {
       console.log('formData', { err, fields, files })
       if (err) {
         console.error(
           'Error Occured while parsing formData, formidable, err:',
           err
         )
-        res.status(500).json({ error: err, message: err.message })
+        response.status(500).json({ error: err, message: err.message })
       } else {
         const { id, title, location } = fields
         const { image } = files
@@ -50,7 +52,7 @@ exports.storePostData = functions.https.onRequest((request, response) => {
         fs.rename(image.path, '/tmp/' + image.name, err => {
           if (err) {
             console.error('Error Occured while renaming file, err:', err)
-            res.status(500).json({ error: err, message: err.message })
+            response.status(500).json({ error: err, message: err.message })
           }
           const bucket = gcStorage.bucket('pwa-cp.appspot.com')
 
@@ -71,7 +73,7 @@ exports.storePostData = functions.https.onRequest((request, response) => {
                   'Error Occured while uploading file to bucket, err:',
                   err
                 )
-                res.status(500).json({ error: err, message: err.message })
+                response.status(500).json({ error: err, message: err.message })
               } else {
                 const postData = {
                   id,
@@ -120,14 +122,14 @@ exports.storePostData = functions.https.onRequest((request, response) => {
                     })
 
                     // send res
-                    res.status(201).json({ message: 'Data Stored.', id: id })
+                    response.status(201).json({ message: 'Data Stored.', id: id })
                   })
                   .catch(err => {
                     console.error(
                       'Error Occured while storing data in database, err:',
                       err
                     )
-                    res.status(500).json({ error: err, message: err.message })
+                    response.status(500).json({ error: err, message: err.message })
                   })
               }
             }

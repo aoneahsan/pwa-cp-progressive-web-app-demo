@@ -5,6 +5,7 @@ const syncManagerAvailableInWindow = 'SyncManager' in window
 const notificationsAvailableInWindow = 'Notification' in window
 const vapidPublicKey =
   'BPgkv9lvuQWaZKfcUMirrqmhy713qC3rFoo5tz2enFdRfbrdRPFXo4pSB0twS-yjMvRu_G4fqwvq0vcJQwtdGq0'
+const floatingTestBtn = document.querySelector('#floating-text-btn')
 
 if (!window.Promise) {
   window.Promise = Promise
@@ -156,3 +157,17 @@ if (notificationsAvailableInWindow) {
     btn.addEventListener('click', askForNotificationsPermissions)
   }
 }
+
+floatingTestBtn.addEventListener('click', event => {
+  if (serviceWorkerAvailableInNavigator) {
+    navigator.serviceWorker.ready
+      .then(sw => {
+        return sw.sync.register(SYNC_MANAGER_KEY_FOR_POST_SYNC)
+      })
+      .then(res => {
+        console.log('SW sync event registered, res: ', res)
+      })
+  } else {
+    alert('SW not available.')
+  }
+})

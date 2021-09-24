@@ -13,7 +13,7 @@ const fs = require('fs')
 const { Storage } = require('@google-cloud/storage')
 
 // Creating Admin Connection
-const serviceAccount = require('./pwa-firebase-keys.json')
+const serviceAccount = require('./functions/pwa-firebase-keys.json')
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: 'https://pwa-cp-default-rtdb.firebaseio.com'

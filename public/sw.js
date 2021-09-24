@@ -5,7 +5,7 @@ importScripts('/src/js/idb.js')
 importScripts('/src/js/utility.js')
 
 // cache keys vars
-const CACHE_VERSION = 'v2'
+const CACHE_VERSION = 'v1'
 const cachesStorageTimeLimitInDays = 1
 const timeToClearCache = cachesStorageTimeLimitInDays * 24 * 60 * 60
 const STATIC_CACHE_KEY = `static-${CACHE_VERSION}`
@@ -30,6 +30,8 @@ self.addEventListener('install', event => {
         '/src/js/material.min.js',
         '/src/js/promise.js',
         '/src/js/fetch.js',
+        '/src/js/idb.js',
+        '/src/js/utility.js',
         '/src/js/app.js',
         '/src/js/feed.js',
         '/src/css/app.css',
@@ -180,10 +182,16 @@ self.addEventListener('fetch', event => {
 
 // listen for background sync events
 self.addEventListener('sync', event => {
+  console.log('[Service Worker] sync event received, event: ', event)
   if (event.tag === SYNC_MANAGER_KEY_FOR_POST_SYNC) {
     event.waitUntil(
       readDataFromIndexDB(POSTS_SYNC_DB_TABLE_NAME)
         .then(data => {
+          console.log(
+            `[Service Worker] sync event reading data from ${POSTS_SYNC_DB_TABLE_NAME}, data: `,
+            data,
+            data.length
+          )
           for (let i = 0; i < data.length; i++) {
             const post = data[i]
             const postFormData = new FormData()
@@ -191,6 +199,11 @@ self.addEventListener('sync', event => {
             postFormData.append('title', post.title)
             postFormData.append('location', post.location)
             postFormData.append('image', post.image, post.id + '.png')
+            console.log(
+              `[Service Worker] sync event looping data read from ${POSTS_SYNC_DB_TABLE_NAME}, current loop item, post: `,
+              post,
+              postFormData
+            )
 
             sendFormDataToUrl(urlToPostsApiPost, postFormData)
               .then(res => {
@@ -216,7 +229,12 @@ self.addEventListener('sync', event => {
               })
           }
         })
-        .catch(err => {})
+        .catch(err => {
+          console.error(
+            `[Service Worker] Error occured while reading data from ${POSTS_SYNC_DB_TABLE_NAME}, err: `,
+            err
+          )
+        })
     )
   }
 })

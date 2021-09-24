@@ -92,6 +92,12 @@ const sendDataToUrl = async (url, data) => {
 const sendFormDataToUrl = async (url, formData) => {
   return fetch(url, {
     method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      // 'Content-Type': 'multipart/form-data',
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    },
     body: formData
   }).then(res => {
     return res.json()
