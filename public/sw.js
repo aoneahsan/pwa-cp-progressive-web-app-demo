@@ -174,11 +174,11 @@ self.addEventListener('notificationclick', event => {
         const activeClient = allClients.find(el => {
           return el.visibilityState === 'visible'
         })
-        if (activeClient) {
+        if (activeClient !== undefined) {
           activeClient.navigate(notification.data.url)
           activeClient.focus()
         } else {
-          activeClient.openWindow(notification.data.url)
+          clients.openWindow(notification.data.url)
         }
       })
     )
